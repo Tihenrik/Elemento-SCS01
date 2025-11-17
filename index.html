@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elemento SCS01</title>
+    <!-- Carrega o Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'brand-primary': '#075E54', 
+                        'brand-accent': '#128C7E', 
+                        'brand-accent-hover': '#0E6D5F',
+                        'login-bg': '#1E1E2E', 
+                        'login-card': '#2A2A3D', 
+                        'login-accent': '#6C63FF', 
+                        'login-accent-hover': '#574EE6', 
+                        'login-text': '#D1D1D5', 
+                        'login-label': '#A0A0B0', 
+                        'dark-bg-main': '#181A1B',  
+                        'dark-bg-card': '#2A2E30',  
+                        'dark-bg-form': '#1F2325',  
+                        'dark-bubble-other': '#343A3C', 
+                        'dark-text-primary': '#E1E3E5', 
+                        'dark-text-secondary': '#B0B4B8', 
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        /* Animação de Fundo Camaleão */
+        @keyframes chameleonBackground {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        body.chameleon-bg {
+            background: linear-gradient(135deg, #121828, #102a43, #331b3b, #22223b);
+            background-size: 300% 300%;
+            animation: chameleonBackground 18s ease infinite;
+        }
+
+        .view { display: none; }
+        
+        #messages-container {
+            background: linear-gradient(135deg, #121828, #102a43, #331b3b, #22223b);
+            background-size: 300% 300%;
+            animation: chameleonBackground 18s ease infinite;
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column-reverse; /* <-- Importante para o chat */
+            padding: 1rem;
+            gap: 0.75rem; 
+        }
+
+        #loading-view {
+            display: none; 
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        /* Emoji Picker */
+        #emoji-picker-container {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            margin-bottom: 0.5rem;
+            left: 1rem;
+            background-color: #2D3748;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            width: 300px;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 10;
+        }
+        #emoji-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.25rem;
+            padding: 0.5rem;
+        }
+        .emoji-item {
+            cursor: pointer;
+            font-size: 1.5rem;
+            text-align: center;
+            border-radius: 0.25rem;
+            padding: 0.25rem;
+            transition: background-color 0.2s;
+        }
+        .emoji-item:hover {
+            background-color: #4A5568;
+        }
+        .emoji-category-title {
+            grid-column: 1 / -1;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #A0AEC0;
+            background-color: #1A202C;
+            padding: 4px 8px;
+            margin-top: 8px;
+            text-transform: uppercase;
+        }
+        /* (Removido .status-dot pois não é mais usado) */
+    </style>
+</head>
+<body class="chameleon-bg font-sans h-full" style="opacity: 0; transition: opacity 0.2s ease-in;">
+
+    <!-- ============================================= -->
+    <!-- View 1: Auth (Login)                          -->
+    <!-- ============================================= -->
+    <div id="auth-view" class="view w-full h-full flex items-center justify-center p-4">
+        <div class="w-full max-w-sm bg-login-card rounded-2xl shadow-2xl p-8" style="background-color: rgba(42, 42, 61, 0.85); backdrop-filter: blur(5px);">
+            <div class="w-full flex justify-center mb-6">
+                <div class="bg-login-accent p-3 rounded-full">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                    </svg>
+                </div>
+            </div>
+            <h2 id="auth-title" class="text-3xl font-bold text-center text-white mb-8">Acesse sua Conta</h2>
+            <form id="auth-form" class="space-y-6">
+                <div id="name-field" class="hidden">
+                    <label for="name" class="block text-sm font-medium text-login-label">Nome (para o chat)</label>
+                    <input type="text" id="name" class="mt-1 block w-full px-4 py-3 bg-login-bg border border-transparent text-login-text rounded-lg focus:outline-none focus:ring-2 focus:ring-login-accent">
+                </div>
+                <div>
+                    <label for="email" class="block text-sm font-medium text-login-label">Email</label>
+                    <input type="email" id="email" class="mt-1 block w-full px-4 py-3 bg-login-bg border border-transparent text-login-text rounded-lg focus:outline-none focus:ring-2 focus:ring-login-accent" required>
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-login-label">Senha</label>
+                    <input type="password" id="password" class="mt-1 block w-full px-4 py-3 bg-login-bg border border-transparent text-login-text rounded-lg focus:outline-none focus:ring-2 focus:ring-login-accent" required>
+                </div>
+                <div id="reset-link-container" class="text-right">
+                    <a href="#" id="btn-reset-password" class="text-sm font-medium text-login-accent hover:text-login-accent-hover">
+                        Esqueci minha senha?
+                    </a>
+                </div>
+                <div id="notification" class="text-center text-sm font-medium min-h-[1.25rem]"></div>
+                <div class="pt-2">
+                    <button type="submit" id="btn-submit" class="w-full py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-semibold text-white bg-login-accent hover:bg-login-accent-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-login-accent transition-colors">
+                        Entrar
+                    </button>
+                </div>
+            </form>
+            <div id="auth-footer-link" class="text-center mt-6">
+                <p class="text-sm text-login-label">
+                    Não tem uma conta? 
+                    <a href="#" id="btn-show-register" class="font-medium text-login-accent hover:text-login-accent-hover">
+                        Registre-se
+                    </a>
+                </p>
+                <p class="text-sm text-login-label hidden">
+                    Já tem uma conta? 
+                    <a href="#" id="btn-show-login" class="font-medium text-login-accent hover:text-login-accent-hover">
+                        Entrar
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================= -->
+    <!-- View 2: Chat (Tema Escuro)                    -->
+    <!-- ============================================= -->
+    <div id="chat-view" class="view w-full h-full md:max-w-4xl md:h-auto md:max-h-[95vh] rounded-lg shadow-xl flex flex-col" style="background-color: rgba(42, 46, 48, 0.85); backdrop-filter: blur(5px);">
+        <!-- Cabeçalho -->
+        <div class="flex justify-between items-center p-4 bg-brand-primary text-white shadow-md rounded-t-lg">
+            <h2 id="welcome-message" class="text-xl font-bold">Sala de Bate-papo</h2>
+            <div class="flex items-center space-x-2">
+                <button id="btn-admin-panel" class="hidden py-2 px-4 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg transition-colors font-semibold text-sm">
+                    Painel admin
+                </button>
+                <button id="btn-logout" class="p-2 bg-red-600 hover:bg-red-700 text-white rounded-full transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Container de Mensagens -->
+        <div id="messages-container" class="flex-1 overflow-y-auto"></div>
+        
+        <!-- Formulário de Envio -->
+        <form id="chat-form" class="p-4 border-t border-gray-700 flex space-x-3 bg-dark-bg-form items-center relative rounded-b-lg">
+            <button type="button" id="btn-emoji" class="flex-shrink-0 p-2 text-login-label hover:text-white rounded-full hover:bg-gray-700 focus:outline-none">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </button>
+            <input type="text" id="message-input" class="flex-1 block w-full px-4 py-3 bg-dark-bg-card border border-gray-700 text-dark-text-primary rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-accent" placeholder="Digite sua mensagem..." required>
+            <button type="submit" class="flex-shrink-0 py-3 px-3 rounded-full shadow-sm text-white bg-brand-accent hover:bg-brand-accent-hover transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+            </button>
+
+            <!-- Emoji Picker -->
+            <div id="emoji-picker-container">
+                <div id="emoji-grid"></div>
+            </div>
+        </form>
+    </div>
+
+    <!-- ============================================= -->
+    <!-- View 3: Pending (Tema Escuro)                 -->
+    <!-- ============================================= -->
+    <div id="pending-view" class="view w-full max-w-lg">
+        <div class="p-10 rounded-lg shadow-xl text-center" style="background-color: rgba(42, 42, 61, 0.85); backdrop-filter: blur(5px);">
+            <svg class="w-16 h-16 text-yellow-500 mx-auto mb-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h2 class="text-3xl font-bold text-white mb-4">Aguardando Aprovação</h2>
+            <p class="text-login-label text-lg mb-8">Sua conta foi criada, mas um administrador precisa aprovar seu acesso.</p>
+            <button id="btn-logout-pending" class="w-full py-3 px-4 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold">
+                Sair
+            </button>
+        </div>
+    </div>
+
+    <!-- ============================================= -->
+    <!-- View 4: Admin Panel (Tema Escuro)             -->
+    <!-- ============================================= -->
+    <div id="admin-panel-view" class="view w-full h-full md:max-w-4xl md:h-auto md:max-h-[95vh] rounded-lg shadow-xl flex flex-col" style="background-color: rgba(42, 46, 48, 0.85); backdrop-filter: blur(5px);">
+        <!-- Cabeçalho Admin -->
+        <div class="flex justify-between items-center p-4 bg-brand-primary text-white shadow-md rounded-t-lg">
+            <h2 class="text-xl font-bold">Painel do Administrador</h2>
+            <button id="btn-close-admin-panel" class="p-2 bg-gray-600 hover:bg-gray-700 text-white rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
+        </div>
+        <!-- Lista de Usuários Admin -->
+        <div id="admin-user-list" class="flex-1 p-4 overflow-y-auto space-y-4"></div>
+        <>
+        <div class="p-4 border-t border-gray-700 bg-dark-bg-form rounded-b-lg">
+            <h3 class="text-lg font-semibold text-red-500"></h3>
+            <div id="delete-chat-section" class="mt-2">
+                <button id="btn-show-delete-chat" class="w-full py-2 px-4 rounded-lg text-white bg-red-600 hover:bg-red-700 transition-colors font-medium">
+                    Limpar Histórico do Chat
+                </button>
+                <div id="delete-chat-confirm" class="hidden">
+                    <p class="text-sm text-dark-text-secondary mb-2">Tem certeza? Isso apagará TODAS as mensagens permanentemente.</p>
+                    <div class="flex space-x-2">
+                        <button id="btn-confirm-delete-chat" class="flex-1 py-2 px-4 rounded-lg text-white bg-red-800 hover:bg-red-900 font-bold">
+                            SIM, Excluir Tudo
+                        </button>
+                        <button id="btn-cancel-delete-chat" class="flex-1 py-2 px-4 rounded-lg text-white bg-gray-600 hover:bg-gray-700 font-medium">
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================= -->
+    <!-- View 5: Loading (Escuro)                      -->
+    <!-- ============================================= -->
+    <div id="loading-view" class="view">
+        <svg class="animate-spin h-12 w-12 text-login-accent" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+    </div>
+
+
+    <!-- ============================================= -->
+    <!-- Scripts do Firebase                           -->
+    <!-- ============================================= -->
+    <script type="module">
+        // Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { 
+            getAuth, 
+            createUserWithEmailAndPassword, 
+            signInWithEmailAndPassword,
+            sendPasswordResetEmail,
+            updateProfile,
+            onAuthStateChanged,
+            signOut,
+            deleteUser
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import {
+            getFirestore,
+            collection,
+            doc,
+            setDoc, 
+            getDoc, 
+            onSnapshot,
+            addDoc,
+            query,
+            orderBy,
+            serverTimestamp,
+            getDocs, 
+            limit, // <-- OTIMIZAÇÃO: Import mantido
+            updateDoc, 
+            deleteDoc,
+            where
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // Config Firebase
+        const firebaseConfig = {
+          apiKey: "AIzaSyBWMCE1LqjfuU8hKVWSFc2iUBz-5htC1XU",
+          authDomain: "elemento-scs01.firebaseapp.com",
+          projectId: "elemento-scs01",
+          storageBucket: "elemento-scs01.firebasestorage.app",
+          messagingSenderId: "816203237600",
+          appId: "1:816203237600:web:ef297b0dc52ee0b7096885"
+        };
+        
+        // Inicialização
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Seletores DOM
+        const views = document.querySelectorAll('.view');
+        const authView = document.getElementById('auth-view');
+        const chatView = document.getElementById('chat-view');
+        const pendingView = document.getElementById('pending-view');
+        const adminPanelView = document.getElementById('admin-panel-view');
+        const loadingView = document.getElementById('loading-view');
+        const authForm = document.getElementById('auth-form');
+        const authTitle = document.getElementById('auth-title');
+        const nameField = document.getElementById('name-field');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const nameInput = document.getElementById('name');
+        const btnResetPassword = document.getElementById('btn-reset-password');
+        const resetLinkContainer = document.getElementById('reset-link-container');
+        const notification = document.getElementById('notification');
+        const btnSubmit = document.getElementById('btn-submit');
+        const authFooterLink = document.getElementById('auth-footer-link');
+        const btnShowRegister = document.getElementById('btn-show-register');
+        const btnShowLogin = document.getElementById('btn-show-login');
+        const welcomeMessage = document.getElementById('welcome-message');
+        const btnLogout = document.getElementById('btn-logout');
+        const btnLogoutPending = document.getElementById('btn-logout-pending');
+        const btnAdminPanel = document.getElementById('btn-admin-panel');
+        const messagesContainer = document.getElementById('messages-container');
+        const chatForm = document.getElementById('chat-form');
+        const messageInput = document.getElementById('message-input');
+        const btnCloseAdminPanel = document.getElementById('btn-close-admin-panel');
+        const adminUserList = document.getElementById('admin-user-list');
+        const btnShowDeleteChat = document.getElementById('btn-show-delete-chat');
+        const deleteChatConfirm = document.getElementById('delete-chat-confirm');
+        const btnConfirmDeleteChat = document.getElementById('btn-confirm-delete-chat');
+        const btnCancelDeleteChat = document.getElementById('btn-cancel-delete-chat');
+        const btnEmoji = document.getElementById('btn-emoji');
+        const emojiPickerContainer = document.getElementById('emoji-picker-container');
+        const emojiGrid = document.getElementById('emoji-grid');
+        
+        // Variáveis globais
+        let currentMode = 'login';
+        let currentUser = null;
+        let userDocListener = null; 
+        let chatMessagesListener = null; 
+        let isDeletingNewUser = false; // Flag para deleção de usuário
+
+        // Função para mostrar Views
+        function showView(viewId) {
+            document.body.style.opacity = '1';
+            const body = document.body;
+            views.forEach(v => v.style.display = 'none');
+            const viewElement = document.getElementById(viewId);
+            if (!viewElement) return;
+
+            if (viewId === 'auth-view' || viewId === 'pending-view' || viewId === 'loading-view') {
+                body.className = 'h-full chameleon-bg flex items-center justify-center font-sans p-4';
+                viewElement.style.display = (viewId === 'loading-view' || viewId === 'auth-view') ? 'flex' : 'block';
+            } else if (viewId === 'chat-view' || viewId === 'admin-panel-view') {
+                body.className = 'h-full chameleon-bg flex justify-center font-sans md:py-8 p-0 md:p-4'; 
+                viewElement.style.display = 'flex';
+            } else {
+                body.className = 'h-full chameleon-bg font-sans p-4';
+                viewElement.style.display = 'block';
+            }
+        }
+        
+        // Atualiza UI de Autenticação
+        function updateAuthUI(mode, options = {}) {
+            currentMode = mode;
+            if (!options.preserveNotification) {
+                clearNotification();
+            }
+            authForm.reset(); 
+            const registerLink = btnShowRegister.parentElement;
+            const loginLink = btnShowLogin.parentElement;
+            if (mode === 'login') {
+                authTitle.textContent = 'Acesse sua Conta';
+                btnSubmit.textContent = 'Entrar';
+                nameField.classList.add('hidden');
+                resetLinkContainer.classList.remove('hidden');
+                loginLink.classList.add('hidden');
+                registerLink.classList.remove('hidden');
+            } else { // Modo Registro
+                authTitle.textContent = 'Crie sua Conta';
+                btnSubmit.textContent = 'Registrar-se';
+                nameField.classList.remove('hidden');
+                resetLinkContainer.classList.add('hidden');
+                registerLink.classList.add('hidden');
+                loginLink.classList.remove('hidden');
+            }
+        }
+        btnShowLogin.addEventListener('click', (e) => { e.preventDefault(); updateAuthUI('login'); });
+        btnShowRegister.addEventListener('click', (e) => { e.preventDefault(); updateAuthUI('register'); });
+        
+        // Funções de Notificação
+        function showNotification(message, isError = true) {
+            notification.textContent = message;
+            notification.classList.toggle('text-red-600', isError);
+            notification.classList.toggle('text-green-600', !isError);
+        }
+        function clearNotification() { notification.textContent = ''; }
+        function handleAuthError(error) {
+            switch (error.code) {
+                case 'auth/invalid-email': showNotification('O formato do email é inválido.'); break;
+                case 'auth/user-not-found': showNotification('Nenhuma conta encontrada com este email.'); break;
+                case 'auth/wrong-password':
+                case 'auth/invalid-credential': showNotification('Email ou senha incorreta.'); break;
+                case 'auth/email-already-in-use': showNotification('Este email já está em uso.'); break;
+                case 'auth/weak-password': showNotification('A senha é muito fraca (mínimo 6 caracteres).'); break;
+                default: showNotification('Ocorreu um erro. Tente novamente.');
+            }
+        }
+
+        // --- Listener Principal de Autenticação ---
+        onAuthStateChanged(auth, (user) => {
+            // Limpa listeners antigos
+            if (userDocListener) userDocListener();
+            if (chatMessagesListener) chatMessagesListener();
+
+            if (user) {
+                currentUser = user;
+                const isNewUser = user.metadata.creationTime === user.metadata.lastSignInTime;
+                if (!isNewUser) showView('loading-view');
+                
+                const userDocRef = doc(db, "users", user.uid);
+                
+                // Ouve o documento do usuário
+                userDocListener = onSnapshot(userDocRef, (docSnap) => {
+                    if (docSnap.exists()) { 
+                        handleUserDoc(docSnap.data()); 
+                    } else {
+                        console.log("Documento do usuário ainda não existe (registro em progresso).");
+                    }
+                }, (error) => {
+                    console.error("Erro ao ouvir doc do usuário:", error);
+                });
+                
+            } else {
+                if (isDeletingNewUser) {
+                    return; // Ignora o logout se foi causado pela deleção de nome duplicado
+                }
+                currentUser = null;
+                showView('auth-view');
+                updateAuthUI('login');
+            }
+        });
+        
+        // Roteia o usuário baseado no Doc
+        function handleUserDoc(userData) {
+            if (!currentUser) return; 
+            const isAdminPanelVisible = adminPanelView.style.display === 'flex';
+            const isChatVisible = chatView.style.display === 'flex';
+            
+            if (userData.role === 'admin') {
+                if (!isChatVisible && !isAdminPanelVisible) { showView('chat-view'); }
+                welcomeMessage.textContent = `${currentUser.displayName || 'Admin'} (Admin)`;
+                btnAdminPanel.style.display = 'inline-block';
+                listenForMessages(); // <--- Inicia o listener de chat (agora otimizado)
+            } else if (userData.authorized) {
+                if (!isChatVisible && !isAdminPanelVisible) { showView('chat-view'); }
+                welcomeMessage.textContent = `${currentUser.displayName || currentUser.email}`;
+                btnAdminPanel.style.display = 'none';
+                listenForMessages(); // <--- Inicia o listener de chat (agora otimizado)
+            } else {
+                showView('pending-view');
+            }
+        }
+        
+        // --- Handler do Formulário de Auth (Login/Registro) ---
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            clearNotification();
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            btnSubmit.disabled = true;
+            btnSubmit.textContent = currentMode === 'login' ? 'Entrando...' : 'Registrando...';
+
+            if (currentMode === 'login') {
+                try {
+                    await signInWithEmailAndPassword(auth, email, password);
+                } catch (error) { 
+                    console.error("Erro no login:", error); 
+                    handleAuthError(error);
+                }
+            } else { // Modo Registro
+                const name = nameInput.value;
+                if (!name) { 
+                    showNotification("Por favor, insira seu nome.");
+                    btnSubmit.disabled = false;
+                    btnSubmit.textContent = 'Registrar-se';
+                    return; 
+                }
+                let user; 
+                try {
+                    // 1. Cria usuário
+                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    user = userCredential.user; 
+
+                    // 2. Verifica nome duplicado
+                    const usersRef = collection(db, "users");
+                    const nameQuery = query(usersRef, where("name", "==", name));
+                    const nameSnapshot = await getDocs(nameQuery);
+                    
+                    if (!nameSnapshot.empty) {
+                        // Nome duplicado
+                        showNotification("Este nome já está em uso. Por favor, escolha outro."); 
+                        showView('auth-view');
+                        updateAuthUI('register', { preserveNotification: true });
+                        isDeletingNewUser = true;
+                        await deleteUser(user); 
+                        isDeletingNewUser = false;
+                        btnSubmit.disabled = false;
+                        btnSubmit.textContent = 'Registrar-se';
+                        return;
+                    }
+
+                    // 3. Continua registro
+                    await updateProfile(user, { displayName: name });
+
+                    const firstUserQuery = query(usersRef, limit(1));
+                    const existingUsers = await getDocs(firstUserQuery);
+                    const isFirstUser = existingUsers.empty;
+                    const userDocRef = doc(db, "users", user.uid);
+                    
+                    // 4. Cria o documento no Firestore
+                    // Otimização já aplicada: campos de presença removidos
+                    await setDoc(userDocRef, {
+                        name: name, email: email,
+                        role: isFirstUser ? 'admin' : 'user', 
+                        authorized: isFirstUser 
+                    });
+                    // O onSnapshot vai pegar esse doc e redirecionar
+
+                } catch (error) {
+                    console.error("Erro no registro:", error);
+                    if (user && error.code !== 'auth/email-already-in-use') { 
+                        isDeletingNewUser = true;
+                        await deleteUser(user).catch(err => console.error("Erro ao deletar usuário após falha:", err));
+                        isDeletingNewUser = false;
+                    }
+                    handleAuthError(error);
+                    btnSubmit.disabled = false;
+                    btnSubmit.textContent = 'Registrar-se';
+                }
+            }
+            
+            // Reabilita o botão
+            if (btnSubmit.disabled) {
+                btnSubmit.disabled = false;
+                btnSubmit.textContent = (currentMode === 'login') ? 'Entrar' : 'Registrar-se';
+            }
+        });
+
+        // --- Logout ---
+        async function handleLogout() {
+            try { 
+                await signOut(auth); 
+            } catch (error) { 
+                console.error("Erro ao sair:", error); 
+            }
+        }
+        btnLogout.addEventListener('click', handleLogout);
+        btnLogoutPending.addEventListener('click', handleLogout);
+        
+        // --- Reset de Senha ---
+        btnResetPassword.addEventListener('click', async (e) => {
+            e.preventDefault();
+            clearNotification(); 
+            const email = emailInput.value;
+            if (!email) {
+                showNotification("Digite seu email para redefinir a senha."); return;
+            }
+            try {
+                await sendPasswordResetEmail(auth, email);
+                showNotification("Email de redefinição enviado!", false);
+            } catch (error) {
+                handleAuthError(error);
+            }
+        });
+
+        // --- Envio de Mensagem ---
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const messageText = messageInput.value;
+            if (messageText.trim() === '' || !currentUser) return;
+            try {
+                await addDoc(collection(db, "messages"), {
+                    text: messageText,
+                    name: currentUser.displayName || currentUser.email,
+                    userId: currentUser.uid,
+                    timestamp: serverTimestamp()
+                });
+                messageInput.value = '';
+                emojiPickerContainer.style.display = 'none';
+            } catch (error) {
+                console.error("Erro ao enviar mensagem: ", error);
+            }
+        });
+
+        // --- OUVINTE DE MENSAGENS (OTIMIZADO) ---
+        function listenForMessages() {
+            if (chatMessagesListener) chatMessagesListener(); 
+
+            // Otimização: limit(50)
+            const q = query(
+                collection(db, "messages"), 
+                orderBy("timestamp", "desc"), 
+                limit(50)
+            );
+            
+            chatMessagesListener = onSnapshot(q, (querySnapshot) => {
+                messagesContainer.innerHTML = '';
+                querySnapshot.forEach((doc) => {
+                    messagesContainer.appendChild(createMessageElement(doc.data()));
+                });
+            }, (error) => {
+                console.error("Erro ao ouvir mensagens:", error);
+            });
+        }
+        
+        // --- Criação de Elemento de Mensagem ---
+        function createMessageElement(msg) {
+            const msgElement = document.createElement('div');
+            msgElement.classList.add('p-3', 'rounded-xl', 'shadow-sm', 'w-fit', 'max-w-[85%]', 'flex', 'flex-col');
+            
+            let formattedTime = "...";
+            if (msg.timestamp) {
+                formattedTime = msg.timestamp.toDate().toLocaleString('pt-BR', { 
+                    day: '2-digit', 
+                    month: '2-digit', 
+                    year: '2-digit', 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+            }
+
+            let messageHTML = '';
+            if (msg.userId === currentUser.uid) {
+                msgElement.classList.add('ml-auto', 'bg-brand-accent', 'rounded-br-none');
+                messageHTML = `
+                    <p class="text-white break-word">${msg.text}</p>
+                    <span class="text-xs text-gray-200 opacity-75 mt-1 ml-2 block text-right self-end">${formattedTime}</span>
+                `;
+            } else {
+                msgElement.classList.add('mr-auto', 'bg-dark-bubble-other', 'rounded-bl-none');
+                messageHTML = `
+                    <strong class="text-sm text-teal-300 font-bold">${msg.name}</strong>
+                    <p class="text-dark-text-primary mt-1 break-word">${msg.text}</p>
+                    <span class="text-xs text-dark-text-secondary opacity-75 mt-1 ml-2 block text-right self-end">${formattedTime}</span>
+                `;
+            }
+            msgElement.innerHTML = messageHTML;
+            return msgElement;
+        }
+
+        // --- Painel Admin (Clicks) ---
+        btnAdminPanel.addEventListener('click', () => {
+            showView('admin-panel-view');
+            loadAdminUserList();
+        });
+        btnCloseAdminPanel.addEventListener('click', () => {
+            showView('chat-view');
+        });
+
+        // --- Carrega Lista de Usuários (Otimizado com getDocs) ---
+        async function loadAdminUserList() {
+            adminUserList.innerHTML = `<p class="text-center text-dark-text-secondary">Carregando usuários...</p>`;
+
+            try {
+                const q = query(collection(db, "users"));
+                // Usa getDocs (não onSnapshot) para economizar leituras
+                const querySnapshot = await getDocs(q);
+                
+                adminUserList.innerHTML = ''; 
+
+                querySnapshot.forEach((doc) => {
+                    const user = doc.data();
+                    const userId = doc.id;
+                    if (user.role === 'admin') return; 
+                    
+                    const userElement = document.createElement('div');
+                    userElement.classList.add('bg-dark-bg-card', 'rounded-lg', 'shadow', 'p-4', 'border', 'border-gray-700');
+                    const isAuthorized = user.authorized;
+
+                    // --- MUDANÇA (Status Removido) ---
+                    // A div inteira de status foi removida daqui.
+                    userElement.innerHTML = `
+                        <div class="flex flex-col md:flex-row md:items-start md:justify-between">
+                            <div class="flex-1 min-w-0 mb-4 md:mb-0">
+                                <strong class="block text-lg text-dark-text-primary">${user.name}</strong>
+                                <span class="text-sm text-dark-text-secondary break-all block">${user.email}</span>
+                            </div>
+                            <div class="flex-shrink-0 w-full md:w-48 md:ml-4 space-y-2">
+                                <button data-userid="${userId}" data-auth="${isAuthorized}" class="btn-authorize text-sm py-2 px-3 rounded-lg text-white w-full ${isAuthorized ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-500 hover:bg-green-600'}">
+                                    ${isAuthorized ? 'Desautorizar' : 'Autorizar'}
+                                </button>
+                            </div>
+                        </div>`;
+                    adminUserList.appendChild(userElement);
+                });
+
+            } catch (error) {
+                 console.error("Erro ao carregar lista de usuários:", error);
+                 adminUserList.innerHTML = `<p class="text-center text-red-500">Erro ao carregar lista de usuários.</p>`;
+            }
+        }
+        
+        // --- Ações do Admin (Autorizar) ---
+        adminUserList.addEventListener('click', async (e) => {
+            const authTarget = e.target.closest('.btn-authorize');
+            if (authTarget) {
+                const userId = authTarget.dataset.userid;
+                const userDocRef = doc(db, "users", userId);
+                const currentAuth = authTarget.dataset.auth === 'true';
+                try {
+                    await updateDoc(userDocRef, { authorized: !currentAuth });
+                    loadAdminUserList(); // Recarrega a lista para atualizar o botão
+                } catch (err) { console.error("Erro ao atualizar autorização:", err); }
+            }
+        });
+
+        // --- Limpar Histórico ---
+        function resetDeleteChatUI() {
+            deleteChatConfirm.classList.add('hidden');
+            btnShowDeleteChat.classList.remove('hidden');
+        }
+        btnShowDeleteChat.addEventListener('click', () => {
+            btnShowDeleteChat.classList.add('hidden');
+            deleteChatConfirm.classList.remove('hidden');
+        });
+        btnCancelDeleteChat.addEventListener('click', () => {
+            resetDeleteChatUI();
+        });
+        btnConfirmDeleteChat.addEventListener('click', async () => {
+            btnConfirmDeleteChat.disabled = true;
+            btnConfirmDeleteChat.textContent = "Excluindo...";
+            try {
+                await deleteAllMessages();
+            } catch (error) {
+                console.error("Erro ao limpar o chat:", error);
+            } finally {
+                btnConfirmDeleteChat.disabled = false;
+                btnConfirmDeleteChat.textContent = "SIM, Excluir Tudo";
+                resetDeleteChatUI();
+            }
+        });
+        async function deleteAllMessages() {
+            const messagesRef = collection(db, "messages");
+            const q = query(messagesRef);
+            const querySnapshot = await getDocs(q);
+            if (querySnapshot.empty) return;
+            const deletePromises = [];
+            querySnapshot.forEach((doc) => {
+                deletePromises.push(deleteDoc(doc.ref));
+            });
+            await Promise.all(deletePromises);
+        }
+
+        // --- EMOJIS ---
+        const EMOJI_CATEGORIES = {
+            'Rostos': ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠'],
+            'Mãos': ['👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️', '💅', '🤳'],
+            'Comida': ['🍏', '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🍈', '🍒', '🍑', '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶️', '🌽', '🥕', '🧄', '🧅', '🥔', '🍠', '🥐', '🥯', '🍞', '🥖', '🥨', '🧀', '🥚', '🍳', '🧈', '🥞', '🧇', '🥓', '🥩', '🍗', '🍖', '🦴', '🌭', '🍔', '🍟', '🍕', '🥪', '🥙', '🧆', '🌮', '🌯', '🥗', '🥘', '🥫', '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟', '🦪', '🍤', '🍙', '🍚', '🍘', '🍥', '🥠', '🥮', '🍢', '🍡', '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍿', '🍩', '🍪', '🌰', '🥜', '🍯', '🥛', '🍼', '☕', '🍵', '🧃', '🥤', '🍶', '🍺', '🍻', '🥂', '🍷', '🥃', '🍸', '🍹', '🧉', '🍾', '🧊', '🥄', '🍴', '🍽️', '🥣', '🥡', '🥢', '🧂'],
+            // CORREÇÃO FEITA ABAIXO
+            'Animais': ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐽', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🦆', '🦢', '🦅', '🦉', '🦚', '🦜', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🦟', '🦗', '🕷️', '🕸️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🦙', '🐐', '🦌', '🐕', '🐩', '🦮', '🐕‍🦺', '🐈', '🐓', '🦃', '🦤', '🕊️', '🐇', '🦝', '🦨', '🦡', '🦦', '🦥', '🐁', '🐀', '🐿️', '🦔'],
+            // CORREÇÕES FEITAS ABAIXO
+            'Objetos': ['⌚', '📱', '💻', '⌨️', '🖥️', '🖱️', '🕹️', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥', '📽️', '🎞️', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙️', '🧭', '⏱️', '⏲️', '⏰', '🕰️', '⌛', '⏳', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🪔', '🧯', '🛢️', '💸', '💵', '💴', '💶', '💷', '💰', '💳', '🧾', '💎', '⚖️', '🦯', '🧰', '🪛', '🔧', '🔨', '⚒️', '🛠️', '⛏️', '🔩', '⚙️', '🧱', '⛓️', '🧲', '🔫', '💣', '🧨', '🪓', '🔪', '🗡️', '⚔️', '🛡️', '🚬', '⚰️', '⚱️', '🏺', '🔮', '📿', '🧿', '💈', '⚗️', '🔭', '🔬', '🩹', '🩺', '💊', '💉', '🩸', '🧬', '🦠', '🧫', '🧪', '🌡️', '🧹', '🧺', '🧻', '🚽', '🚰', '🚿', '🛁', '🛀', '🧼', '🪥', '🪒', '🧽', '🧴', '🛎️', '🔑', '🗝️', '🚪', '🪑', '🛋️', '🛌', '🧸', '🖼️', '🛍️', '🛒', '🎁', '🎈', '🎏', '🎀', '🎊', '🎉', '🎎', '🏮', '🎐', '🧧', '✉️', '📩', '📨', '📧', '💌', '📥', '📤', '📦', '🏷️', '📪', '📫', '📬', '📮', '📜', '📃', '📄', '📑', '🧾', '📊', '📈', '📉', '🗒️', '🗓️', '📆', '📅', '🗑️', '🗳️', '📋', '📁', '📂', '🗞️', '📰', '📓', '📔', '📒', '📕', '📗', '📘', '📙', '📚', '📖', '🔖', '🧷', '🔗', '📎', '🖇️', '📐', '📏', '🧮', '📌', '📍', '✂️', '🖊️', '🖋️', '✒️', '🖌️', '🖍️', '📝', '✏️', '🔍', '🔎', '🔏', '🔐', '🔒', '🔓']
+        };
+
+        // Inicializa Emoji Picker
+        function initializeEmojiPicker() {
+            emojiGrid.innerHTML = ''; 
+            for (const [category, emojis] of Object.entries(EMOJI_CATEGORIES)) {
+                const title = document.createElement('div');
+                title.classList.add('emoji-category-title');
+                title.textContent = category;
+                emojiGrid.appendChild(title);
+                emojis.forEach(emoji => {
+                    const emojiSpan = document.createElement('span');
+                    emojiSpan.classList.add('emoji-item');
+                    emojiSpan.textContent = emoji;
+                    emojiGrid.appendChild(emojiSpan);
+                });
+            }
+            emojiGrid.addEventListener('click', (e) => {
+                if (e.target.classList.contains('emoji-item')) {
+                    messageInput.value += e.target.textContent;
+                    messageInput.focus();
+                }
+            });
+            btnEmoji.addEventListener('click', (e) => {
+                e.stopPropagation(); 
+                const isHidden = emojiPickerContainer.style.display === 'none' || emojiPickerContainer.style.display === '';
+                emojiPickerContainer.style.display = isHidden ? 'block' : 'none';
+            });
+            document.addEventListener('click', (e) => {
+                if (!chatForm.contains(e.target)) {
+                    emojiPickerContainer.style.display = 'none';
+                }
+            });
+            chatForm.addEventListener('submit', () => {
+                emojiPickerContainer.style.display = 'none';
+            });
+        }
+        
+        // --- Inicialização ---
+        initializeEmojiPicker();
+        showView('loading-view'); 
+
+    </script>
+</body>
+</html>
+
